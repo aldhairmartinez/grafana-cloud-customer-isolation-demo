@@ -1,0 +1,13 @@
+# credentials and local state
+.env
+.env.*
+!.env.example
+*.secrets*
+data/
+*.pid
+*.log
+
+# python / os
+__pycache__/
+*.pyc
+.DS_Store

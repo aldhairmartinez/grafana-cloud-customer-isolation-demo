@@ -1,0 +1,624 @@
+{
+  "title": "Publishing API - Customer View",
+  "description": "Shared customer-isolation demo dashboard. Each viewer's data is filtered by data source LBAC rules on their team; the dashboard itself contains no customer names or IDs.",
+  "tags": [
+    "customer-isolation",
+    "lbac-demo"
+  ],
+  "timezone": "browser",
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "customer",
+        "label": "Customer",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "__DS_PROM_UID__"
+        },
+        "query": {
+          "qryType": 3,
+          "query": "query_result(group by (customer_id) (publishing_http_requests_total{demo=\"customer-isolation\", service_name=\"publishing-api\"}))",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "query_result(group by (customer_id) (publishing_http_requests_total{demo=\"customer-isolation\", service_name=\"publishing-api\"}))",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1,
+        "regex": "/customer_id=\"([^\"]+)\"/",
+        "options": []
+      },
+      {
+        "name": "level",
+        "label": "Log level",
+        "type": "custom",
+        "query": "INFO,WARN,ERROR",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Request rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__DS_PROM_UID__"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__DS_PROM_UID__"
+          },
+          "expr": "sum by (customer_name) (rate(publishing_http_requests_total{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\"}[5m]))",
+          "instant": true,
+          "legendFormat": "{{customer_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "5xx error rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__DS_PROM_UID__"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__DS_PROM_UID__"
+          },
+          "expr": "sum by (customer_name) (rate(publishing_http_requests_total{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\", status=~\"5..\"}[5m])) / sum by (customer_name) (rate(publishing_http_requests_total{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\"}[5m]))",
+          "instant": true,
+          "legendFormat": "{{customer_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.02
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "p95 latency",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__DS_PROM_UID__"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__DS_PROM_UID__"
+          },
+          "expr": "histogram_quantile(0.95, sum by (customer_name, le) (rate(publishing_http_request_duration_seconds_bucket{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\"}[5m])))",
+          "instant": true,
+          "legendFormat": "{{customer_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "JVM heap used",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__DS_PROM_UID__"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__DS_PROM_UID__"
+          },
+          "expr": "sum by (customer_name) (jvm_memory_used_bytes{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\", area=\"heap\"}) / sum by (customer_name) (jvm_memory_max_bytes{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\", area=\"heap\"})",
+          "instant": true,
+          "legendFormat": "{{customer_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.8
+              },
+              {
+                "color": "red",
+                "value": 0.9
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Request rate by customer",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__DS_PROM_UID__"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__DS_PROM_UID__"
+          },
+          "expr": "sum by (customer_name) (rate(publishing_http_requests_total{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\"}[$__rate_interval]))",
+          "legendFormat": "{{customer_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Requests by route and status",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__DS_PROM_UID__"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__DS_PROM_UID__"
+          },
+          "expr": "sum by (customer_name, route, status) (rate(publishing_http_requests_total{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\"}[$__rate_interval]))",
+          "legendFormat": "{{customer_name}} {{route}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "5xx error rate",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__DS_PROM_UID__"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__DS_PROM_UID__"
+          },
+          "expr": "sum by (customer_name) (rate(publishing_http_requests_total{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\", status=~\"5..\"}[$__rate_interval])) / sum by (customer_name) (rate(publishing_http_requests_total{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\"}[$__rate_interval]))",
+          "legendFormat": "{{customer_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "p95 request latency",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__DS_PROM_UID__"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__DS_PROM_UID__"
+          },
+          "expr": "histogram_quantile(0.95, sum by (customer_name, le) (rate(publishing_http_request_duration_seconds_bucket{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\"}[$__rate_interval])))",
+          "legendFormat": "{{customer_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "JVM heap used vs max",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__DS_PROM_UID__"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__DS_PROM_UID__"
+          },
+          "expr": "sum by (customer_name) (jvm_memory_used_bytes{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\", area=\"heap\"})",
+          "legendFormat": "{{customer_name}} used"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__DS_PROM_UID__"
+          },
+          "expr": "sum by (customer_name) (jvm_memory_max_bytes{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\", area=\"heap\"})",
+          "legendFormat": "{{customer_name}} max"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Log volume by level",
+      "datasource": {
+        "type": "loki",
+        "uid": "__DS_LOGS_UID__"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "__DS_LOGS_UID__"
+          },
+          "expr": "sum by (customer_name, detected_level) (count_over_time({demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\"}[$__auto]))",
+          "legendFormat": "{{customer_name}} {{detected_level}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "type": "logs",
+      "title": "Application logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "__DS_LOGS_UID__"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "__DS_LOGS_UID__"
+          },
+          "expr": "{demo=\"customer-isolation\", service_name=\"publishing-api\", customer_id=~\"$customer\"} | json | level=~\"$level\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "prettifyLogMessage": false
+      }
+    }
+  ],
+  "uid": "customer-isolation"
+}

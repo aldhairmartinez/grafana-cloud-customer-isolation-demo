@@ -1,0 +1,89 @@
+// Dedicated Alloy pipeline for the customer-isolation demo.
+// Run it as its own process (own HTTP port and storage path) so it never touches
+// an existing collector. start.sh does this for you.
+//
+// Every value comes from the environment (start.sh loads .env):
+//   DEMO_METRICS_PORT, DEMO_LOG_DIR,
+//   GC_METRICS_PUSH_URL, GC_METRICS_USER, GC_LOGS_PUSH_URL, GC_LOGS_USER, GC_WRITE_TOKEN
+
+// ---------- Metrics: scrape the generator every 15s -> Grafana Cloud Metrics ----------
+prometheus.scrape "publishing_api" {
+  targets         = [{"__address__" = "127.0.0.1:" + sys.env("DEMO_METRICS_PORT")}]
+  job_name        = "customer-isolation-demo/publishing-api"
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  honor_labels    = true
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GC_METRICS_PUSH_URL")
+
+    basic_auth {
+      username = sys.env("GC_METRICS_USER")
+      password = sys.env("GC_WRITE_TOKEN")
+    }
+  }
+}
+
+// ---------- Logs: tail the JSON log file -> Grafana Cloud Logs ----------
+local.file_match "publishing_api" {
+  path_targets = [{"__path__" = sys.env("DEMO_LOG_DIR") + "/publishing-api.log"}]
+}
+
+loki.source.file "publishing_api" {
+  targets    = local.file_match.publishing_api.targets
+  forward_to = [loki.process.publishing_api.receiver]
+}
+
+loki.process "publishing_api" {
+  stage.json {
+    expressions = {
+      ts            = "timestamp",
+      customer_id   = "customer_id",
+      customer_name = "customer_name",
+    }
+  }
+
+  stage.timestamp {
+    source = "ts"
+    format = "RFC3339"
+  }
+
+  // Index labels: low cardinality only. request_id stays in the JSON body.
+  // NOTE: in this demo the customer label is read from the log line. In production,
+  // set it from a trusted source instead (see docs/onboarding.md, "Trusted customer labels").
+  stage.labels {
+    values = {
+      customer_id   = "",
+      customer_name = "",
+    }
+  }
+
+  stage.static_labels {
+    values = {
+      demo         = "customer-isolation",
+      service_name = "publishing-api",
+      environment  = "demo",
+    }
+  }
+
+  // loki.source.file adds a `filename` label; drop it to keep the label set exact.
+  stage.label_drop {
+    values = ["filename"]
+  }
+
+  forward_to = [loki.write.grafana_cloud.receiver]
+}
+
+loki.write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GC_LOGS_PUSH_URL")
+
+    basic_auth {
+      username = sys.env("GC_LOGS_USER")
+      password = sys.env("GC_WRITE_TOKEN")
+    }
+  }
+}
