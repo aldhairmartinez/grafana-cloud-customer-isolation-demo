@@ -364,7 +364,7 @@ def assign(cfg, api, email, key, out=print):
         out(f"already a member of {target}; nothing to do")
         return 0
     api.req("POST", f"/api/teams/{team['id']}/members", {"userId": user["userId"]})
-    out(f"added to {target}. Run `verify`, then the browser checklist in docs/validation-checklist.md.")
+    out(f"added to {target}. Run `verify`, then the validation checklist in the README.")
     return 0
 
 

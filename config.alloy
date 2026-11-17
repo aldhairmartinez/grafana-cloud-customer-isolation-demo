@@ -53,7 +53,7 @@ loki.process "publishing_api" {
 
   // Index labels: low cardinality only. request_id stays in the JSON body.
   // NOTE: in this demo the customer label is read from the log line. In production,
-  // set it from a trusted source instead (see docs/onboarding.md, "Trusted customer labels").
+  // set it from a trusted source instead (see README, "Trusted customer labels").
   stage.labels {
     values = {
       customer_id   = "",
